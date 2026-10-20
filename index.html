@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <title>KaultAI — Own Your Professional Edge</title>
+<script>
+/* Arm the first entrance before the page can paint; a watchdog restores content if loading stalls. */
+(function(){
+  if(!Element.prototype.animate || matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var root=document.documentElement;
+  root.classList.add('entrance-pending');
+  if(!matchMedia('(max-width:639px), (min-aspect-ratio:6/5) and (max-height:559px), (min-aspect-ratio:6/5) and (max-width:919px)').matches){
+    root.classList.add('entrance-card');
+  }
+  window.__entranceWatchdog=setTimeout(function(){
+    root.classList.remove('entrance-pending','entrance-card');
+  },4500);
+})();
+</script>
 <style>
 /* ---------- Embedded fonts (offline) ---------- */
 @font-face{font-family:"KDisplay";src:url(assets/kdisplay-500.woff2) format("woff2");font-weight:500;font-display:block}
@@ -255,6 +269,24 @@ svg{display:block}
 /* narrowest phones: third suggestion spans the row so labels never wrap mid-word */
 @media (max-width:359px){ .tiles{grid-template-columns:1fr 1fr} .tile:last-child{grid-column:span 2;min-height:calc(86 * var(--k))} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Initial foreground states. The hero and card artwork never receives an animation. */
+html.entrance-pending .hero h1{clip-path:inset(0 0 100% 0);transform:translateY(10px)}
+html.entrance-pending .tag{opacity:0;transform:translateX(-8px)}
+html.entrance-pending .hero p{opacity:0;transform:translateY(10px)}
+html.entrance-pending.entrance-card .card__head,
+html.entrance-pending.entrance-card .card h2,
+html.entrance-pending.entrance-card .tile,
+html.entrance-pending.entrance-card .ask{opacity:0;transform:translateY(9px)}
+@media (prefers-reduced-motion:reduce){
+  html.entrance-pending .hero h1{clip-path:none;transform:none}
+  html.entrance-pending .tag,
+  html.entrance-pending .hero p,
+  html.entrance-pending.entrance-card .card__head,
+  html.entrance-pending.entrance-card .card h2,
+  html.entrance-pending.entrance-card .tile,
+  html.entrance-pending.entrance-card .ask{opacity:1;transform:none}
+}
 </style>
 </head>
 <body>
@@ -320,6 +352,70 @@ svg{display:block}
 /* Stable viewport height on browsers without dvh (older iOS) */
 (function(){if(CSS&&CSS.supports&&CSS.supports('height','1dvh'))return;
 function s(){document.documentElement.style.setProperty('--vh',(innerHeight/100)+'px')}s();addEventListener('resize',s)})();
+
+/* A single entrance clock. Every effect is cancelled after it settles, restoring authored styles. */
+(function(){
+  var root=document.documentElement;
+  if(!root.classList.contains('entrance-pending'))return;
+  var active=[];
+  var done=false;
+  function finish(){
+    if(done)return;
+    done=true;
+    clearTimeout(window.__entranceWatchdog);
+    root.classList.remove('entrance-pending','entrance-card');
+    active.forEach(function(animation){animation.cancel()});
+  }
+  function play(selector,frames,start,duration,easing){
+    var element=document.querySelector(selector);
+    if(!element)return;
+    active.push(element.animate(frames,{
+      delay:start,duration:duration,easing:easing,fill:'both'
+    }));
+  }
+  function start(){
+    if(done || !root.classList.contains('entrance-pending') || matchMedia('(prefers-reduced-motion: reduce)').matches){finish();return}
+    try{
+      var ease='cubic-bezier(.22,1,.36,1)';
+      var quiet='cubic-bezier(.25,.8,.25,1)';
+      play('.hero h1',[
+        {clipPath:'inset(0 0 100% 0)',transform:'translateY(10px)'},
+        {clipPath:'inset(0 0 0 0)',transform:'none'}
+      ],0,1000,ease);
+      play('.tag--vel',[
+        {opacity:0,transform:'translateX(-8px)'},{opacity:1,transform:'none'}
+      ],430,480,quiet);
+      play('.tag--deep',[
+        {opacity:0,transform:'translateX(-8px)'},{opacity:1,transform:'none'}
+      ],580,480,quiet);
+      play('.tag--flow',[
+        {opacity:0,transform:'translateX(-8px)'},{opacity:1,transform:'none'}
+      ],730,480,quiet);
+      play('.hero p',[
+        {opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'none'}
+      ],870,630,ease);
+      if(root.classList.contains('entrance-card')){
+        play('.card__head',[
+          {opacity:0,transform:'translateY(7px)'},{opacity:1,transform:'none'}
+        ],180,550,quiet);
+        play('.card h2',[
+          {opacity:0,transform:'translateY(9px)'},{opacity:1,transform:'none'}
+        ],800,680,ease);
+        ['.tile:nth-child(1)','.tile:nth-child(2)','.tile:nth-child(3)'].forEach(function(selector,index){
+          play(selector,[
+            {opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}
+          ],1240+index*85,490,ease);
+        });
+        play('.ask',[
+          {opacity:0,transform:'translateY(9px)'},{opacity:1,transform:'none'}
+        ],1560,620,ease);
+      }
+      Promise.allSettled(active.map(function(animation){return animation.finished})).then(finish);
+    }catch(error){finish()}
+  }
+  if(document.readyState==='complete')start();
+  else addEventListener('load',start,{once:true});
+})();
 </script>
 </body>
 </html>
